@@ -182,6 +182,12 @@ func (r *LightRenderer) queryTerminal(queries []termQuery) [][][]byte {
 }
 
 func (r *LightRenderer) queryStartup() (row int, col int, pasteWasSet *bool) {
+	// Terminal.app echoes the trailing "p" of DECRQM over existing text, so
+	// fzf's cleanup would leave the cell blank. Query only the cursor position.
+	if os.Getenv("TERM_PROGRAM") == "Apple_Terminal" {
+		row, col = r.findOffset()
+		return
+	}
 	replies := r.queryTerminal(startupQueries)
 	before, paste, after := replies[0], replies[1], replies[2]
 

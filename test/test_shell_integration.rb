@@ -169,6 +169,25 @@ module TestShell
     tmux.until { |lines| assert_equal '3rd', lines[-1] }
   end
 
+  def test_ctrl_r_bash_oldest_entry
+    skip unless shell == :bash
+    skip unless system('perl', '-e', '1', out: File::NULL, err: File::NULL)
+
+    history = "#{tempname}-history"
+    File.write(history, "git status\nls\ngit log\ngit status\n")
+    tmux.prepare
+    tmux.send_keys "history -c; history -r #{history}; echo ready", :Enter
+    tmux.until { |lines| assert_equal 'ready', lines[-1] }
+
+    tmux.send_keys 'C-r'
+    tmux.until { |lines| assert_operator lines.match_count, :>, 0 }
+    tmux.send_keys 'git status'
+    tmux.until { |lines| assert_equal 1, lines.match_count }
+    tmux.send_keys :Escape
+  ensure
+    FileUtils.rm_f(history) if history
+  end
+
   def test_ctrl_r_multiline
     # NOTE: Current bash implementation shows an extra new line if there's
     # only entry in the history
